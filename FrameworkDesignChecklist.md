@@ -148,6 +148,10 @@ type's identifier.
     * Rationale: Nested types are tightly coupled with their containing types. They are not extensible and are difficult to test.
     * Enforcement: Manual (**can be automated**).
 ---
+5. Types with behaviours (methods and non-auto properties) must implement interfaces.
+    * Rationale: Testability, interfaces are easier to mock.
+    * Enforcement: Manual (**can be automated**).
+---
 #### Overloading
 ---
 1. Prefer optional parameters over overloading. 
@@ -239,14 +243,16 @@ convert the returned object.
     * Rationale: Extensibility; it is impossible to predict how consumers may use a framework. 
     * Enforcement: Manual (**can be automated**).
 ---
-<!-- Check for performance issues, if programming off interfaces, does virtual further slow things?-->
-<!--https://github.com/dotnet/coreclr/blob/master/Documentation/botr/virtual-stub-dispatch.md
-https://blogs.msdn.microsoft.com/vancem/2016/05/13/encore-presentation-measure-early-and-often-for-performance/-->
-<!-- Its possible to use moq without making internal methods virtual https://stackoverflow.com/questions/4769928/using-moq-to-mock-only-some-methods -->
-2. Public members should be virtual (other than constructors).
+2. Public properties and methods must be virtual.
     * Rationale: Extensibility and testability; virtual members can be overidden, as a result they can be mocked by testing frameworks.
-Keeping members non-virtual has little benefit for open source projects. For such projects, the onus for ensuring that member implementations 
-are valid falls on implementors since they have full access to source code.
+Keeping members non-virtual has little benefit for open source projects. For such projects, the onus for ensuring that implementations 
+are valid falls on implementors since they have full access to source code. Performance-wise, most public members should be implementations, 
+which are already marked virtual by the compiler.
+    * Enforcement: Manual (**can be automated**).
+---
+3. Non public methods must be internal virtual.
+    * Rationale: Testability. Virtual so that they can be mocked when testing the members that use them.
+    * Enforcement: Manual (**can be automated**).
 ---
 #### Parameters
 ---
@@ -318,7 +324,7 @@ will not be thrown, the re-verification can be avoided.
     * Rationale: Convention.
     * Enforcement: Manual.
 ---
-4. Required arguments must be get-only properties populated from constructor parameters.
+4. Required arguments must be get-only properties populated from parameters constructor.
     * Rationale: Convention.
     * Enforcement: Manual.
 ---
@@ -339,15 +345,173 @@ this inhibits their extensibility.
 ---
 ## Patterns
 #### Dependency Injection Pattern
-5. Types with behaviours (methods and non-auto properties) must implement interfaces.
-    * Rationale: See "Dependency Injection". Also, interfaces are easier to mock when testing.
+---
+1. new must not be used in classes other than factories and builders.
+    * Rationale: Testability and extensibility; coupling makes testing and extending difficult.
+    * Enforcement: Manual (**can be automated**).
+---
+2. Services must be mapped to interfaces.
+    * Rationale: Testability and extensibility; interfaces are easier to mock and implement compared to base or abstract classes.
+    * Enforcement: Manual (**can be automated**).
+---
+3. Injected objects must be assigned to private readonly fields.
+    * Rationale: Consistency; injected objects should not be exposed or replaced after injection. 
+    * Enforcement: Manual (**can be automated**).
+---
+4. Services must be registered in an *IServiceCollection* extension method.
+    * Rationale: Reusability; major third party dependency injection frameworks support *IServiceCollection*.
     * Enforcement: Manual (**can be automated**).
 ---
 #### Factory Pattern
+---
+1. Types that need runtime data to have a valid state and that can be created in a single step must be instantiated using factories.
+    * Rationale: Clarity and consistency - other solutions involve convoluting the effective dependency graph, e.g by 
+registering functions that ultimately do what a factory would do. Also, factories allow for easy extensibility, factory classes can be extended or
+re-implemented.
+    * Enforcement: Manual (**can be automated**).
+---
+2. Factories must have at least one method with identifier *Create*. This method can be overloaded.
+    * Rationale: Consistency.
+    * Enforcement: Manual (**can be automated**).
+---
+3. Create methods must return interfaces.
+    * Rationale: Extensibility; factories should not be coupled to concrete types.
+    * Enforcement: Manual (**can be automated**).
+---
 #### Builder Pattern
+---
+1. Types that need runtime data to have a valid state and that cannot be created in a single step must be instantiated using builders.
+    * Rationale: Clarity and consistency. The rationale for builders is the same as the rationale for factories.
+    * Enforcement: Manual (**can be automated**).
+---
+2. Builders must have at least two add methods. Add methods must have identifiers of the form *\<Add>\<noun>*.
+    * Rationale: Consistency; if only one add method is required, use a factory.
+    * Enforcement: Manual (**can be automated**).
+---
+3. Builders must have one and only one build method with identifier *Build*.
+    * Rationale: Consistency. 
+    * Enforcement: Manual (**can be automated**).
+---
+4. Builder public methods must return the builder.
+    * Rationale: Ease of use; allows for chaining.
+    * Enforcement: Manual (**can be automated**).
+---
+5. Build methods must return interfaces.
+    * Rationale: Extensibility; builders should not be coupled to concrete types.
+    * Enforcement: Manual (**can be automated**).
+---
 #### Localization Pattern
+---
+1. Consumer facing strings must be defined in a resx file. E.g strings to be printed to the console, logs, or exception messages. Strings meant for
+internal use such as arguments for a console application should be embedded in code.
+    * Rationale: Reusability and management; strings in a resx file can be tuned or translated together more easily than strings scattered
+through a codebase.
+    * Enforcement: Manual.
+---
 ## Testing
+#### Naming
+---
+1. Test class identifiers must be of the form *\<name of class under test>(UnitTests|IntegrationTests|EndToEndTests)*.
+    * Rationale: Consistency, uniqueness.
+    * Enforcement: Manual (**can be automated**).
+---
+2. Test method identifiers must be of the form *\<name of method under test>_\<test case>*, e.g *Run_ThrowsInvalidOperationExceptionIfArgumentsDoNotContainCommand*.
+    * Rationale: Consistency, uniqueness.
+    * Enforcement: Manual (**can be automated**).
+---
+3. *MemberData* method identifiers must be of the form *\<test method name>Data*.
+    * Rationale: Consistency, uniqueness.
+    * Enforcement: Manual (**can be automated**).
+---
+4. *dummy* must be prepended to identifiers of local variables that will not have their behaviours verified. *mock* must be prepended to
+identifiers of local variables that will have their behaviours verified.
+    * Rationale: Consistency.
+    * Enforcement: Manual (**can be automated**).
+---
+5. *Dummy* must be prepended to identifiers of types declared for use as dummies in tests.
+    * Rationale: Consistency.
+    * Enforcement: Manual (**can be automated**).
+---
+#### Parameterized Test
+---
+1. Use *MemberData* for parameterized tests.
+    * Rationale: More flexible than *InlineData* and less verbose than *ClassData*.
+    * Enforcement: Manual (**can be automated**).
+---
+2. Tests that can be parameterized without adding flow control statements must be parameterized.
+    * Rationale: Maintainability and ease of use; standard don't repeat yourself. Adding flow control for parameters convolutes tests, in such cases
+use multiple tests. 
+    * Enforcement: Manual.
+---
+#### Parallelism
+---
+1. As far as possible, run tests in parallel.
+    * Rationale: Performance; tests from different classes within the same assembly should be run in parallel. Over the course of a project's lifespan, time spent ensuring that 
+tests can run in parallel is typically less than the time spent waiting for tests to run both locally and in continuous integration. 
+    * Enforcement: Manual (**can be automated**).
+---
+2. <!-- enable parallelization between assemblies (instructions online are unclear, try on a test project) -->
+---
+3. Avoid using console output in assertions. Wrap *Console* methods in a service and stub it out when testing.
+    * Rationale: Output from different threads in a process is written to the same *TextWriter*. This makes output unreliable for testing.
+    * Enforcement: Manual (**can be automated**).
+---
+6. Class or collection fixtures must be used if setup or teardown incurs significant overhead.
+    * Rationale: Performance.
+    * Enforcement: Manual.
+---
+#### Helper Methods
+---
+1. Every test class must have a create method that creates an instance of the type under test as well as its constructor parameters. This method must be called in the
+test class's constructor. The resultant instance and its constructor parameters must be assigned to local fields.
+    * Rationale: Ease of use; this way each test only needs to setup the constructor parameters that are relevant to the test. Triggering of null assertions and the like  
+are avoided and the addition of parameters will not require updates to all tests.
+    * Enforcement: Manual (**can be automated**).
+---
+#### Temporary Files and Folders
+---
+1. Temporary folders must have names of the form \<guid>.
+    * Rationale: Ensures that temporary folder names are unique.
+    * Enforcement: Manual (**can be automated**).
+---
+2. Temporary files and folders must be deleted in a *Dispose* method.
+    * Rationale: Prevent build up of test artifacts.
+    * Enforcement: Manual.
+---
 #### Unit Testing
+---
+1. All methods must be unit tested (getters and setters of non-auto properties as well as indexers included).
+    * Rationale: Maintainability.
+    * Enforcement: Manual (**can be automated**).
+---
+2. A unit test's scope must be a single method. Therefore, a method's mockable dependencies must be mocked. Un-mockable dependencies such as types with static/extension methods and 
+non overridable methods must be wrapped in services that are then mocked. E.g *System.IO.File* must be wrapped in a *FileService* type.
+CoreFX and CoreCLR types that have no side effects such as *String* are exempt from mocking.
+    * Rationale: Fine-grained, deterministic tests are allow root causes of issues to be pinpointed more accurately.
+    * Enforcement: Manual.
+---
+3. Mock behaviours must be verified.
+    * Rationale: Behaviour verification causes brittleness, which makes it harder to break a codebase without breaking tests. This is useful for open 
+source projects, where contributors often do not have a full mental model of the framework they are making changes to.
+    * Enforcement: Manual (**can be automated**).
+---
+5. *MockRepository* must be used for mock creation and behaviour verification.
+    * Rationale: Consistency.
+    * Enforcement: Manual.
+---
 #### Integration Testing
+---
+1. An integration test must only be used to check for correctness in cross boundary interactions between units. E.g if *File.WriteAll* is used in a method, unit tests will mock it out.
+If it is necessary to verify that output is actually written to disk in the right format/location etc, then an integration test can be used. In this case the units are the method
+that calls *File.WriteAll* and *File.WriteAll*. Each is tested individually but the results of their interactions are uncertain.
+    * Rationale: Efficiency.
+    * Enforcement: Manual.
+---
 #### End to End Testing
+---
+1. End to end tests must only be used to check for correctness in the end to end behaviour of an entire product or library. In otherwords, they must test scenarios that consumers of the 
+product or library will encounter. E.g for a console application, end to end tests involve entering console arguments and parsing console output to ensure that the output is as expected.
+    * Rationale: Efficiency.
+    * Enforcement: Manual.
+---
 ## Documentation
