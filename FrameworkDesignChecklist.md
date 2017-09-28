@@ -310,7 +310,7 @@ will not be thrown, the re-verification can be avoided.
     * Enforcement: Manual.
 ---
 ## Type Specific Rules
-### Attributes
+#### Attributes
 ---
 1. Attribute identifiers must be appended with the suffix "Attribute".
     * Rationale: Convention.
@@ -328,7 +328,7 @@ will not be thrown, the re-verification can be avoided.
     * Rationale: Convention.
     * Enforcement: Manual.
 ---
-### Collections
+#### Collections
 ---
 1. Use *Collection\<T>*, *KeyedCollection\<TKey, TItem>* or their subclasses for read/write public members or public member return values.
     * Rationale: Classes like *List\<T>* and *Dictionary<TKey, TValue>* have non-overridable methods for performance sake,
@@ -510,8 +510,125 @@ that calls *File.WriteAll* and *File.WriteAll*. Each is tested individually but 
 #### End to End Testing
 ---
 1. End to end tests must only be used to check for correctness in the end to end behaviour of an entire product or library. In otherwords, they must test scenarios that consumers of the 
-product or library will encounter. E.g for a console application, end to end tests involve entering console arguments and parsing console output to ensure that the output is as expected.
+product or library will encounter. E.g for a console application, end to end tests should involve entering console arguments and parsing console output or checking for changes to file system
+to ensure that the application works as expected.
     * Rationale: Efficiency.
     * Enforcement: Manual.
 ---
 ## Documentation
+#### Targets
+---
+1. Public members must be documented. Documentation can be explicit or inherited.
+    * Rationale: Ease of use.
+    * Enforcement: CS1591.
+---
+2. Public interfaces, abstract classes and base classes must have explicit documentation. Implementors and overriders must inherit their documentation.
+    * Rationale: Ease of use and consistency; consumers interact with interfaces. Also, documentation on abstract types serve as a guide for implementors and overriders.
+    * Enforcement: Manual (**can be automated**, also consider a code analysis tool that copies documentation and keeps it in sync since \<inheritdoc/> does not work 
+without plugins).
+---
+#### Grammar and Punctuation
+---
+1. Contents of all tags must have proper punctuation. E.g sentences must end with full stops.
+    * Rationale: Ease of use.
+    * Enforcement: Manual.
+---
+2. Use plural subjects. E.g *Commands implement ICommand*, not *A command implements ICommand*.
+    * Rationale: Consistency and concision.
+    * Enforcement: Manual.
+---
+3. Always use the definite article *the* over the indefinite articles *a* or *an* when referring to the entity being documented or its conceptual parents. 
+E.g *The application's entry method*, not *An application's entry method*.
+    * Rationale: Grammatical correctness; consumers typically read summaries through intellisense, at that point the entity and its conceptual parents already exist.
+    * Enforcement: Manual.
+---
+4. Non general statements must start with an article. E.g *The default command*, not *Default command*.
+    * Rationale: Consistency.
+    * Enforcement: Manual.
+---
+#### Summary Tag
+---
+1. Member documentation must include a summary in a \<summary> tag.
+    * Rationale: Ease of use; intellisense displays the contents of the summary tag. 
+    * Enforcement: SA1604, SA1606.
+---
+2. Summaries must describe what the member does, not how the member does what it does. E.g *Parser.Parse: parses specified arguments into a ParseResult*, not 
+*Parser.Parse: maps arguments to a model, verifies validity of model, creates ParseResult and finally returns ParseResult*.
+    * Rationale: Ease of use and maintainability; consumers use abstractions to avoid having to deal with lower level stuff, how a member does what it does is superfluous to them. Also,
+describing what a member does in detail couples the documentation and the code, this makes maintenance a nightmare since documentation cannot indicate that it is out of sync. Moreover, 
+a member's body already describes the how of what it does.
+    * Enforcement: Manual.
+---
+#### Params Tag
+---
+1. Member documentation must include documentation for parameters in \<param> tags with name attributes corresponding to parameter identifiers.
+    * Rationale: Ease of use; intellisense displays the contents of params tags when entering arguments.
+    * Enforcement: SA1611 (**no code fix**), CS1573 (**does not work for interfaces**).
+---
+2. \<param> tag contents must describe the parameter, what it is, its expected state and what it does, not how it does what it does. E.g *The non-zero integer used as the multiplier*, 
+not *Validated to not be 0 then multiplied with quantity x to produce return value y*.
+    * Rationale: Consumers are only concerned with what the parameter does and its expected state. How it does what it does is an internal concern.
+    * Enforcement: Manual.
+---
+#### Returns Tag
+---
+1. Member documentation must include documentation for the return value in a \<returns> tag (if there is a return value).
+    * Rationale: Ease of use; intellisense does not display the contents of return tags, however, consumers can navigate to members to view the contents of return tags.
+    * Enforcement: SA1615.
+---
+2. \<returns> tag contents must describe the return value, namely what it is. E.g *The default command*.
+    * Rationale: Ease of use.
+    * Enforcement: Manual.
+---
+3. If the return type is of type bool, the \<returns> tag content must be of the form *true if \<condition>; otherwise, false*.
+    * Rationale: Consistency.
+    * Enforcement: Manual (**can be automated**).
+#### Exception Tag
+---
+1. Member documentation must include documentation for exceptions in \<exception> tags with cref attributes.
+    * Rationale: Ease of use; intellisense displays the exceptions.
+    * Enforcement: Manual (**can be automated**).
+---
+2. \<exception> tag contents must be of the form *Thrown if \<condition>*.
+    * Rationale: Consistentcy.
+    * Enforcement: Manual (**can be automated**).
+---
+#### See Tag
+---
+1. \<see> tags must be used when referring to instances of types or members. When a sentence can refer to an instance of a type or the entity that the type represents, use a
+\<see> tag. E.g in a *CommandLineApplicationContext* class, use *The command line application's \<see cref="IParser">*, not *The \<see cref="CommandLineApplication>'s parser*.
+In the example, there is no *CommandLineApplication* in a context class, thus the sentence must refer to the business domain entity, the *command line application*. Both 
+*\<see cref="IParser">* and parser are valid, so use the \<see> tag.
+    * Rationale: Using see tags where possible helps with navigating generated docs.
+    * Enforcement: Manual.
+---
+2. Append *s*, *'s* or *s'* to a \<see> tag to show pluralism, possession, and plural possession respectively. E.g *\<see cref="Command">s* not *\<see cref="Command"> instances*.
+    * Rationale: Concision.
+    * Enforcement: Manual.
+---
+#### Entity Specific Rules
+---
+1. Class and interface summaries must begin with *Represents*. 
+    * Rationale: Consistency; classes and interfaces are code based representations of *things*.
+    * Enforcement: Manual (**can be automated**).
+---
+2. Constructors must begin with *Initializes a new instance of the <see cref="\<class name>" class*.
+    * Rationale: Consistency.
+    * Enforcement: SA1642.
+---
+3. Property summaries must begin with *Gets or sets* or *Gets*.
+    * Rationale: Makes it immediately obvious whether a property has a setter.
+    * Enforcement: SA1623.
+---
+4. Properties of type bool must being with *Gets[ or sets] a value indicating*.
+    * Rationale: Consistency.
+    * Enforcement: Manual (**can be automated**).
+---
+5. Property values must be described as part of summaries. The \<value> tag must not be used.
+    * Rationale: Intellisense does not display the \<value> tag. Consumers need to know what a properties value represents in order to use it.
+    * Enforcement: Manual (**can be automated**).
+---
+6. Method summaries must start with the same verb or verb phrase used for the method identifier.
+    * Rationale: Consistency.
+    * Enforcement: Manual (**can be automated**).
+---
