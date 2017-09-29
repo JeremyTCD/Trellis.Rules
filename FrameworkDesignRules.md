@@ -126,6 +126,9 @@ type's identifier.
     * Rationale: Consistency.
     * Enforcement: Manual.
 ---
+17. File names must match type identifiers.
+    * Rationale: Consistency.
+    * Enforcement: SA1649.
 ## Type Design
 ### Classes, Interfaces and Enums
 ---
@@ -266,10 +269,12 @@ This isn't relevant for projects with proper inversion of control since most pub
     * Rationale: Ease of use. 
     * Enforcement: Manual (**can be automated**).
 ---
-4. Parameters for exposed members (public or protected) must be validated. 
-    * Rationale: Catching misuse close to their occurences makes for easier fixes.
+4. Parameters for exposed members (public or protected) that are used by the type must be validated. E.g if a type has a *Commands* collection injected but does nothing with it
+other than pass it to a *CommandDictionaryFactory*'s *Create* method, the type should not validate the collection.
+    * Rationale: Catching misuse close to their occurences makes for easier fixes. At the same time, validation should only occur in the types they are used in. Otherwise, 
+objects that get passed around will get validated multiple times and validation code for one type's operations will get duplicated all over the codebase. 
     * Enforcement: Manual (**can be automated**).
----
+---  
 5. Params parameters from exposed members must be validated to not be null. 
     * Rationale: Catching misuse close to their occurences makes for easier fixes.
     * Enfocement: Manual (**can be automated**).
@@ -459,12 +464,14 @@ tests can run in parallel is typically less than the time spent waiting for test
 ---
 #### Helper Methods
 ---
-1. Every test class must have a create method that creates an instance of the type under test as well as its constructor parameters. This method must be called in the
-test class' constructor. The resulting instance and its constructor parameters must be assigned to local fields.
-    * Rationale: Ease of use; this way each test only needs to setup the constructor parameters that are relevant to the test. Triggering of null assertions and the like
+1. Every test class must have helpers to create types that are instantiated by tests. These helpers must have optional parameters and logic to create dummies for 
+parameters that aren't supplied. E.g a *Create\<Class under test>* method that creates an instance of the type under test. Types that will never take parameters are exempted from 
+this rule, e.g option classes that must have parameterless constructors.
+    * Rationale: Ease of use; this way each test only needs to setup the parameters that are relevant to the test. Triggering of null assertions and the like
 are avoided and the addition of parameters will not require updates to all tests.
     * Enforcement: Manual (**can be automated**).
 ---
+
 #### Temporary Files and Folders
 ---
 1. Temporary folders must have names of the form \<guid>.
@@ -517,7 +524,7 @@ to ensure that the application works as expected.
 ---
 1. Public members must be documented. Documentation can be explicit or inherited.
     * Rationale: Ease of use.
-    * Enforcement: CS1591.
+    * Enforcement: SA1600.
 ---
 2. Non-implemented and non-override members must have explicit documentation. Implementors and overriders must inherit their documentation.
     * Rationale: Ease of use and consistency; consumers interact with interfaces. Also, documentation on abstract types serve as a guide for implementors and overriders.
@@ -528,7 +535,7 @@ without plugins).
 ---
 1. Contents of all tags must have proper punctuation. E.g sentences must end with full stops.
     * Rationale: Ease of use.
-    * Enforcement: Manual.
+    * Enforcement: Mostly manual, SA1629 (Tag contents must end with a full stop, implemented but not merged).
 ---
 2. Use plural subjects. E.g *Commands must implement ICommand*, not *A command must implements ICommand*.
     * Rationale: Consistency and concision.
@@ -560,7 +567,7 @@ a member's body already describes the how of what it does.
 ---
 1. Member documentation must include documentation for parameters in *\<param>* tags with name attributes corresponding to parameter identifiers.
     * Rationale: Ease of use; intellisense displays the contents of params tags when entering arguments.
-    * Enforcement: SA1611 (**no code fix**), CS1573 (**does not work for interfaces**).
+    * Enforcement: SA1611 (**no code fix**), SA1612, SA1613, 1614.
 ---
 2. *\<param>* tag contents must describe the parameter: what it is, its expected state and what it does. They must describe not how it does what it does. E.g *The non-zero integer used as the multiplier*, 
 not *Validated to not be 0 then multiplied with quantity x to produce return value y*.
@@ -571,7 +578,7 @@ not *Validated to not be 0 then multiplied with quantity x to produce return val
 ---
 1. Member documentation must include documentation for the return value in a *\<returns>* tag (if there is a return value).
     * Rationale: Ease of use; intellisense does not display the contents of return tags, however, consumers can navigate to members to view the contents of return tags.
-    * Enforcement: SA1615.
+    * Enforcement: SA1615, SA1616.
 ---
 2. \<returns> tag contents must describe the return value, namely what it is. E.g *The default command*.
     * Rationale: Ease of use.
