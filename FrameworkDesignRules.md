@@ -249,7 +249,7 @@ convert the returned object.
 One commonly raised issue with virtual members is that they raise the probability of misuse. This isn't relevant for open source projects. For such projects, the onus for 
 ensuring that implementations are valid falls on implementors since they have full access to source code. Another commonly cited issue with virtual members is performance.
 This isn't relevant for projects with proper inversion of control since most public members should be implementations, which are already marked virtual by the compiler.
-    * Enforcement: Manual (**can be automated**).
+    * Enforcement: JA1100.
 ---
 3. Non public methods must be internal virtual.
     * Rationale: Testability; they must be mockable when testing the members that use them.
@@ -269,8 +269,8 @@ This isn't relevant for projects with proper inversion of control since most pub
     * Rationale: Ease of use. 
     * Enforcement: Manual (**can be automated**).
 ---
-4. Parameters for exposed members (public or protected) that are used by the type must be validated. E.g if a type has a *Commands* collection injected but does nothing with it
-other than pass it to a *CommandDictionaryFactory*'s *Create* method, the type should not validate the collection.
+4. Parameters for exposed members (public or protected) that are used by the type must be validated. Injected parameters are excempt from this rule since injection frameworks 
+will throw errors if services are missing. Consumers should not manually construct such objects.
     * Rationale: Catching misuse close to their occurences makes for easier fixes. At the same time, validation should only occur in the types they are used in. Otherwise, 
 objects that get passed around will get validated multiple times and validation code for one type's operations will get duplicated all over the codebase. 
     * Enforcement: Manual (**can be automated**).
@@ -291,6 +291,11 @@ objects that get passed around will get validated multiple times and validation 
     * Rationale: Pointers aren't common, consumers may not be familiar with it.
     * Enforcement: Manual (**can be automated**).
 ---
+#### Declarations
+---
+1. *var* must not be used for type inference in declarations.
+    * Rationale: Makes code harder to understand, especially when viewed outside of Visual Studio, e.g in the browser.
+    * Enforcement: Manual (**can be automated**).
 ## Exceptions
 ---
 1. Throw exceptions when and only when, a member cannot do what it is supposed to do, in otherwords, if a member encounters a non-recoverable situation, throw.
@@ -305,7 +310,12 @@ such as *FileExists* in the above example or documentation specifying what is ex
     * Rationale: Performance. 
     * Enforcement: Manual.
 ---
-3. Try methods must be provided on top of existing methods if verifying that calls will not throw is expensive. E.g if *FileExists* is called before attempting *OpenFile* and *OpenFile*
+3. Always verify values passed that are to be used as arguments to avoid invocations throwing exceptions. E.g if a function calls Dictionary\<TKey, TValue>.GetValue(arg),
+it must verify that arg is not null and attempt to handle the issue or throw if the function cannot do what it is supposed to do.
+    * Rationale: Ease of use; exceptions thrown by invocations within a method are less likely to be helpful for library consumers. 
+    * Enforcement: Manual.
+---
+4. Try methods must be provided on top of existing methods if verifying that calls will not throw is expensive. E.g if *FileExists* is called before attempting *OpenFile* and *OpenFile*
 implicitly checks if the file exists again, the verification occurs twice. If the verification is expensive, a *TryOpenFile* method must be
 added. 
     * Rationale: Performance. Note that try methods must be added on top of existing methods so that if a consumer has verified that an exception
@@ -425,8 +435,8 @@ through a codebase.
     * Rationale: Consistency, uniqueness.
     * Enforcement: Manual (**can be automated**).
 ---
-4. *dummy* must be prepended to identifiers of local variables that will not have their behaviours verified. *mock* must be prepended to
-identifiers of local variables that will have their behaviours verified.
+4. *dummy* must be prepended to identifiers of local variables that have no behaviour. *stub* must be prepended to identifiers of local variables with behaviour that will not be verified. 
+*mock* must be prepended to identifiers of local variables that will have their behaviours verified.
     * Rationale: Consistency.
     * Enforcement: Manual (**can be automated**).
 ---
@@ -464,14 +474,19 @@ tests can run in parallel is typically less than the time spent waiting for test
 ---
 #### Helper Methods
 ---
-1. Every test class must have helpers to create types that are instantiated by tests. These helpers must have optional parameters and logic to create dummies for 
-parameters that aren't supplied. E.g a *Create\<Class under test>* method that creates an instance of the type under test. Types that will never take parameters are exempted from 
-this rule, e.g option classes that must have parameterless constructors.
-    * Rationale: Ease of use; this way each test only needs to setup the parameters that are relevant to the test. Triggering of null assertions and the like
-are avoided and the addition of parameters will not require updates to all tests.
-    * Enforcement: Manual (**can be automated**).
+1. Every test class must have a *Create\<ClassUnderTest>* method. These helpers must have optional parameters. Abstract classes must return mocks of the class under test.
+    * Rationale: Ease of use; this way each test only needs to setup the parameters that are relevant to the test. Adding parameters to the class under test will not
+require updates to all tests.
+    * Enforcement: Manual (**can be automated**). 
 ---
-
+2. Never use *Mock\<T>()*, always use *MockRepository.Create\<T>()*.
+    * Rationale: Ease of use; this way mocks do not need to be verified individually.
+    * Enforcement: JA1009.
+### Maintainability
+---
+1.  If a test method's dummy local variable implements an interface, mock the interface instead of creating an instance of the class.
+    * Rationale: If constructor parameters change, tests will not need to be updated. Also, there will be no need to worry about null checks. 
+    * Enforcement: Manual (**can be automated**).
 #### Temporary Files and Folders
 ---
 1. Temporary folders must have names of the form \<guid>.
@@ -526,7 +541,7 @@ to ensure that the application works as expected.
     * Rationale: Ease of use.
     * Enforcement: SA1600.
 ---
-2. Non-implemented and non-override members must have explicit documentation. Implementors and overriders must inherit their documentation.
+2. Non-implemented and non-override members must have explicit documentation. Implementors and overriders can inherit their documentation or have explicit documentation.
     * Rationale: Ease of use and consistency; consumers interact with interfaces. Also, documentation on abstract types serve as a guide for implementors and overriders.
     * Enforcement: Manual (**can be automated**, also consider a code analysis tool that copies documentation and keeps it in sync since \<inheritdoc/> does not work 
 without plugins).
@@ -563,7 +578,7 @@ describing what a member does in detail couples the documentation and the code, 
 a member's body already describes the how of what it does.
     * Enforcement: Manual.
 ---
-#### Params Tag
+#### Param Tag
 ---
 1. Member documentation must include documentation for parameters in *\<param>* tags with name attributes corresponding to parameter identifiers.
     * Rationale: Ease of use; intellisense displays the contents of params tags when entering arguments.
@@ -589,7 +604,7 @@ not *Validated to not be 0 then multiplied with quantity x to produce return val
     * Enforcement: Manual (**can be automated**).
 #### Exception Tag
 ---
-1. Member documentation must include documentation for exceptions in *\<exception>* tags with cref attributes.
+1. Member documentation must include documentation for all exceptions thrown by the member in *\<exception>* tags with cref attributes.
     * Rationale: Ease of use; intellisense displays the exceptions.
     * Enforcement: Manual (**can be automated**).
 ---
@@ -608,6 +623,12 @@ there is no *CommandLineApplication* instance in a context class, thus the sente
 ---
 2. Append *s*, *'s* or *s'* to a *\<see>* tag to show pluralism, possession, and plural possession respectively. E.g *\<see cref="Command">s* not *\<see cref="Command"> instances*.
     * Rationale: Concision.
+    * Enforcement: Manual.
+---
+#### Paramref Tag
+---
+1. *\<paramref>* tags must be used when referring to parameters.
+    * Rationale: Ease of use; name values are updated automatically if parameters are renamed.
     * Enforcement: Manual.
 ---
 #### Entity Specific Rules
